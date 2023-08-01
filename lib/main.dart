@@ -1,8 +1,6 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:quizz_app/model/question_model.dart';
-import 'package:quizz_app/service/api_service.dart';
+import 'package:quizz_app/provider/option_provider.dart';
 import 'package:quizz_app/view/options_buttons.dart';
 import 'package:quizz_app/view/options_text.dart';
 import 'package:quizz_app/view/question.dart';
@@ -37,25 +35,19 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  late Future _future;
+  OptionProvider optionProvider = OptionProvider();
   QuestionModel? selectedQuestion;
 
   @override
   void initState() {
+    _future = optionProvider.getRandomQuestion();
     super.initState();
-    loadRandomQuestion();
-  }
-
-  Future<void> loadRandomQuestion() async {
-    try {
-      ApiService apiService = ApiService();
-      List<QuestionModel> questions = await apiService.fetchQuestions();
-      int randomNumber = Random().nextInt(questions.length) + 1;
+    _future.then((value) {
       setState(() {
-        selectedQuestion = questions[randomNumber - 1];
+        selectedQuestion = value;
       });
-    } catch (e) {
-      print('Erro: $e');
-    }
+    });
   }
 
   @override
@@ -67,17 +59,22 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: selectedQuestion == null
           ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Question(ask: selectedQuestion!.ask),
-                  const SizedBox(height: 80),
-                  OptionsText(selectedQuestion: selectedQuestion!),
-                  const SizedBox(height: 200),
-                  const OptionsButtons(),
-                ],
-              ),
+          : FutureBuilder(
+              future: _future,
+              builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Question(ask: selectedQuestion!.ask),
+                      const SizedBox(height: 80),
+                      OptionsText(selectedQuestion: selectedQuestion!),
+                      const SizedBox(height: 200),
+                      const OptionsButtons(),
+                    ],
+                  ),
+                );
+              },
             ),
     );
   }
